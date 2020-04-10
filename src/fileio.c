@@ -269,6 +269,7 @@ FILE* osd_fopen(int pathtype, int pathindex, const char *filename, const char *m
 
    osd_get_path(pathtype, currDir);
    snprintf(buffer, PATH_MAX_LENGTH, "%s%c%s", currDir,path_default_slash_c(), filename);
+   printf("opening %s\n", buffer);
 
    path_mkdir(currDir);
 

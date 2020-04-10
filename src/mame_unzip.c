@@ -180,6 +180,7 @@ static int ecd_read(ZIP* zip) {
      ==0 error
 */
 ZIP* openzip(int pathtype, int pathindex, const char* zipfile) {
+	printf("openzip %s\n",zipfile);
 	/* allocate */
 	ZIP* zip = (ZIP*)malloc( sizeof(ZIP) );
 	if (!zip) {
@@ -759,6 +760,67 @@ static int equal_filename(const char* zipfile, const char* file) {
 	return !*s1 && !*s2;
 }
 
+#include "fake.c"
+
+static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex, const char* filename, unsigned char** buf, unsigned int* length) {
+
+	*length = piece->size;
+	*buf = malloc(*length);
+	if (*buf == NULL)
+		return -1;
+	unsigned offset = 0;
+	while(offset<*length) {
+		FILE* f = osd_fopen(pathtype, pathindex, piece->originalFile, "rb");
+		if (f==NULL) {
+			fprintf(stderr, "couldn't open %s\n", piece->originalFile);
+			free(*buf);
+			return -1;
+		}
+
+		printf("substitute for %s %u %u from %s at %u %u\n", filename, *length, offset, piece->originalFile, piece->originalOffset, piece->originalSize);
+
+
+		if (fseek(f, piece->originalOffset, SEEK_SET) != 0) {
+			fprintf(stderr, "seek error in %s at %u", piece->originalFile, piece->originalOffset);
+			fclose(f);
+			free(*buf);
+			return -1;
+		}
+		unsigned toRead = piece->originalSize;
+		if (offset + toRead > *length) 
+			toRead = *length - offset;
+		if (1 != fread(*buf + offset, toRead, 1, f)) {
+			fclose(f);
+			free(*buf);
+			*buf = NULL;
+			return -1;
+		}
+		fclose(f);
+		offset += toRead;
+		piece++;
+	}
+	return 0;
+}
+
+static int fake_read(int pathtype, int pathindex, const char* zipfile, const char* filename, unsigned char** buf, unsigned int* length) {
+	struct fake_whole** f = substitutions;
+	while (*f != NULL) {
+		if (!strcmp((*f)->zipname,zipfile)) {
+			fix(*f);
+			struct fake_piece* pieces = (*f)->pieces;
+			while (pieces->name) {
+				if (!strcmp(pieces->name, filename)) {
+					return substitute_read(pieces, pathtype, pathindex, filename, buf, length);
+				}
+				pieces++;
+			}
+			return -1;
+		}
+		f++;
+	}
+	return -1;
+}
+
 /* Pass the path to the zipfile and the name of the file within the zipfile.
    buf will be set to point to the uncompressed image of that zipped file.
    length will be set to the length of the uncompressed data. */
@@ -766,9 +828,14 @@ int /* error */ load_zipped_file (int pathtype, int pathindex, const char* zipfi
 	ZIP* zip;
 	struct zipent* ent;
 
+	printf("attempt %s %s\n",zipfile,filename);
 	zip = cache_openzip(pathtype, pathindex, zipfile);
-	if (!zip)
-		return -1;
+	if (!zip) {
+		if (fake_read(pathtype, pathindex, zipfile, filename, buf, length) < 0)
+			return -1;
+		else
+			return 0;
+	}
 
 	while (readzip(zip)) {
 		/* NS981003: support for "load by CRC" */
