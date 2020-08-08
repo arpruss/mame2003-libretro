@@ -768,6 +768,26 @@ static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex
 	*buf = malloc(*length);
 	if (*buf == NULL)
 		return -1;
+	if (piece->gfx) {
+		printf("gfx");
+		FILE* bmp = osd_fopen(pathtype, pathindex, piece->originalFile, "rb");
+		if (bmp != NULL) {
+			unsigned char* gfx_buf = encode_gfx(piece->gfx,bmp,piece->originalOffset+piece->originalSize);
+			fclose(bmp);
+			if (gfx_buf != NULL) {
+				memcpy(*buf, gfx_buf+piece->originalOffset, piece->originalSize);
+				free(gfx_buf);
+				return 0;
+			}
+			free(*buf);
+			return -1;
+		}
+		else {
+			free(*buf);
+			return -1;
+		}
+		
+	}
 	unsigned offset = 0;
 	while(offset<*length) {
 		FILE* f = osd_fopen(pathtype, pathindex, piece->originalFile, "rb");

@@ -1,12 +1,128 @@
 #include <stdlib.h>
 #include "driver.h"
 
+
+static struct GfxLayout centipede_charlayout =
+{
+	8,8,
+	RGN_FRAC(1,2),
+	2,
+	{ RGN_FRAC(1,2), 0 },
+	{ 0, 1, 2, 3, 4, 5, 6, 7 },
+	{ 0*8, 1*8, 2*8, 3*8, 4*8, 5*8, 6*8, 7*8 },
+	8*8
+};
+
+static struct GfxLayout centipede_spritelayout =
+{
+	8,16,
+	RGN_FRAC(1,2),
+	2,
+	{ RGN_FRAC(1,2), 0 },
+	{ 0, 1, 2, 3, 4, 5, 6, 7 },
+	{ 0*8, 1*8, 2*8, 3*8, 4*8, 5*8, 6*8, 7*8,
+			8*8, 9*8, 10*8, 11*8, 12*8, 13*8, 14*8, 15*8 },
+	16*8
+};
+
+static struct GfxDecodeInfo centiped_gfxdecodeinfo[] =
+{
+	{ REGION_GFX1, 0, &centipede_charlayout,     0, 1 },
+	{ REGION_GFX1, 0, &centipede_spritelayout,   4, 4*4*4 },
+	{ -1 }
+};
+
+static unsigned gfx_total_size(struct GfxDecodeInfo* info) {
+	return memory_region_length(info[0].memory_region); // TODO: doesn't work for multiregion
+}
+
+static unsigned get32LE(unsigned char* data) {
+	return data[0] | ((unsigned)data[1]<<8) | ((unsigned)data[2]<<16) || ((unsigned)data[3]<<24);
+}
+
+static unsigned get_from_bmp(unsigned char* bmp, unsigned x, unsigned y) {
+	unsigned off_bits = get32LE(bmp+10);
+	unsigned width = get32LE(bmp+14+4);
+	unsigned height = get32LE(bmp+14+8);
+	return bmp[off_bits+width*(height-1-y)+x];
+}
+
+static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start) {
+}
+
+
+static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize) {
+	unsigned len = gfx_total_size(info);
+	if (len<minSize)
+		len = minSize;
+	unsigned char* buf = malloc(len);
+
+	if (buf == NULL)
+		return buf;
+
+	for(int i=0;i<len;i++)
+		buf[i]=0;
+
+	fseek(bmpFile, 0, SEEK_END);
+	unsigned bmpSize = ftell(bmpFile);
+	fseek(bmpFile, 0, SEEK_SET);
+	unsigned char* bmp = malloc(bmpSize);
+	if (bmp == NULL) 
+		return buf;
+	fread(bmp, bmpSize, 1, bmpFile);
+	puts("read bmp");
+
+	unsigned rlen = memory_region_length(info[0].memory_region); // TODO: multiregion
+
+	while(info->memory_region != -1) {
+		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start);
+		info++;
+	}
+
+	return buf;
+}
+
+
+static struct GfxDecodeInfo milliped_gfxdecodeinfo[] =
+{
+	{ REGION_GFX1, 0, &centipede_charlayout,     0, 4 },
+	{ REGION_GFX1, 0, &centipede_spritelayout, 4*4, 4*4*4*4 },
+	{ -1 }
+};
+
+
+
+/*************************************
+ *
+ *	Graphics layouts: Warlords
+ *
+ *************************************/
+
+static struct GfxLayout warlords_charlayout =
+{
+	8,8,
+	RGN_FRAC(1,4),
+	2,
+	{ RGN_FRAC(1,2), 0 },
+	{ 0, 1, 2, 3, 4, 5, 6, 7 },
+	{ 0*8, 1*8, 2*8, 3*8, 4*8, 5*8, 6*8, 7*8 },
+	8*8
+};
+
+static struct GfxDecodeInfo warlords_gfxdecodeinfo[] =
+{
+	{ REGION_GFX1, 0x000, &warlords_charlayout, 0,   8 },
+	{ REGION_GFX1, 0x200, &warlords_charlayout, 8*4, 8*4 },
+	{ -1 }
+};
+
 struct fake_piece {
     const char* name;
     unsigned size;
     const char* originalFile;
     unsigned originalOffset;
     unsigned originalSize; // if smaller than size, will read more than once
+    struct GfxDecodeInfo* gfx;
 };
 
 struct fake_whole {
@@ -38,8 +154,8 @@ struct fake_whole centiped3 = {
      {"centiped.308" },
      {"centiped.309" },
      {"centiped.310" },
-     {"centiped.211", 2048, "zero", 0 },
-     {"centiped.212", 2048, "zero", 0 },
+     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, &centiped_gfxdecodeinfo },
+     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, &centiped_gfxdecodeinfo },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
@@ -201,3 +317,5 @@ static void fix(struct fake_whole* f) {
         piece++;
     }
 }
+
+
