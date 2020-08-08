@@ -37,14 +37,19 @@ static unsigned gfx_total_size(struct GfxDecodeInfo* info) {
 }
 
 static unsigned get32LE(unsigned char* data) {
-	return data[0] | ((unsigned)data[1]<<8) | ((unsigned)data[2]<<16) || ((unsigned)data[3]<<24);
+	return data[0] | ((unsigned)data[1]<<8) | ((unsigned)data[2]<<16) | ((unsigned)data[3]<<24);
 }
 
 static unsigned get_from_bmp(unsigned char* bmp, unsigned x, unsigned y) {
 	unsigned off_bits = get32LE(bmp+10);
 	unsigned width = get32LE(bmp+14+4);
 	unsigned height = get32LE(bmp+14+8);
-	return bmp[off_bits+width*(height-1-y)+x];
+	//return bmp[off_bits+width*(height-1-y)+x];
+	unsigned offset = width*(height-1-y)+x;
+	if(offset%2) 
+		return bmp[off_bits+offset/2] & 0xF;
+	else
+		return bmp[off_bits+offset/2] >> 4;
 }
 
 static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start, unsigned bmpX, unsigned bmpY) {
@@ -52,6 +57,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	unsigned height = layout->height;
 	unsigned region_length = regionSize * 8;
 	unsigned total = IS_FRAC(layout->total) ? region_length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
+	printf("w %d h %d t %d\n",width,height,total);
 	for(unsigned i=0;i<MAX_GFX_PLANES;i++)
 	{
 		int value = layout->planeoffset[i];
@@ -72,13 +78,13 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	for (unsigned c=0;c<total;c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
 			unsigned v = get_from_bmp(bmp, bmpX+x, bmpY+height*c+y);
+			//printf("%u,%u:%x\n",x,y,v);//
 			for (int plane=0;plane<layout->planes;plane++) {
 				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
-				if(pos/8>=regionSize) {
-					printf("overflow\n");
+				if(pos/8+start>=regionSize) {
 					continue;
 				}
-				if (v) //&(1<<plane)) 
+				if (v&(1<<plane)) 
 					base[pos/8] |= (1<<(pos%8));
 				else
 					base[pos/8] &= ~(1<<(pos%8));
@@ -116,6 +122,7 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 		return buf;
 	}
 	printf("did read bmp %u\n",bmpSize);
+	printf("bmp %u %u\n", (unsigned)bmp[14+4],(unsigned)bmp[14+8]);
 
 	printf("%u\n",info[0].memory_region);
 	unsigned rlen = memory_region_length(info[0].memory_region); // TODO: multiregion
@@ -206,7 +213,7 @@ struct fake_whole centiped3 = {
      {"centiped.309" },
      {"centiped.310" },
      {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo, 0, 0 },
-     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 8, 0 },
+     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 16, 0 },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
