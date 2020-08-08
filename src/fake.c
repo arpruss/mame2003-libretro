@@ -77,7 +77,12 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	unsigned char* base = out + start;
 	for (unsigned c=0;c<total;c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
-			unsigned v = get_from_bmp(bmp, bmpX+x, bmpY+height*c+y);
+			unsigned v;
+			if(width==height)
+		        v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
+			else
+				continue;
+		        //v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			//printf("%u,%u:%x\n",x,y,v);//
 			for (int plane=0;plane<layout->planes;plane++) {
 				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
@@ -213,7 +218,7 @@ struct fake_whole centiped3 = {
      {"centiped.309" },
      {"centiped.310" },
      {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo, 0, 0 },
-     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 16, 0 },
+     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 8, 0 },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };

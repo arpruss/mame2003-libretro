@@ -775,6 +775,7 @@ static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex
 			unsigned char* gfx_buf = encode_gfx(piece->gfx,bmp,piece->originalOffset+piece->originalSize,piece->bmpX,piece->bmpY);
 			fclose(bmp);
 			if (gfx_buf != NULL) {
+				printf("copying gfx from %u\n", piece->originalOffset);
 				memcpy(*buf, gfx_buf+piece->originalOffset, piece->originalSize);
 				free(gfx_buf);
 				return 0;
