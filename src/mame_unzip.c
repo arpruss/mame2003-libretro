@@ -772,10 +772,12 @@ static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex
 		printf("gfx");
 		FILE* bmp = osd_fopen(pathtype, pathindex, piece->originalFile, "rb");
 		if (bmp != NULL) {
-			unsigned char* gfx_buf = encode_gfx(piece->gfx,bmp,piece->originalOffset+piece->originalSize,piece->bmpX,piece->bmpY);
+			unsigned char* gfx_buf = encode_gfx(piece->gfx,bmp,piece->originalOffset+piece->originalSize);
 			fclose(bmp);
 			if (gfx_buf != NULL) {
 				printf("copying gfx from %u\n", piece->originalOffset);
+				//memset(gfx_buf+2048,255,4096-2048);
+				
 				memcpy(*buf, gfx_buf+piece->originalOffset, piece->originalSize);
 				free(gfx_buf);
 				return 0;

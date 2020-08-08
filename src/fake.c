@@ -57,7 +57,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	unsigned height = layout->height;
 	unsigned region_length = regionSize * 8;
 	unsigned total = IS_FRAC(layout->total) ? region_length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
-	printf("w %d h %d t %d\n",width,height,total);
+	printf("st %d w %d h %d t %d off %d\n",start,width,height,total,bmpX);
 	for(unsigned i=0;i<MAX_GFX_PLANES;i++)
 	{
 		int value = layout->planeoffset[i];
@@ -78,10 +78,8 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	for (unsigned c=0;c<total;c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
 			unsigned v;
-			if(width==height)
 		        v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
-			else
-				continue;
+			//if (height!=width) v = 15;
 		        //v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			//printf("%u,%u:%x\n",x,y,v);//
 			for (int plane=0;plane<layout->planes;plane++) {
@@ -100,7 +98,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 }
 
 
-static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize, unsigned bmpX, unsigned bmpY) {
+static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize) {
 
 	printf("%u\n",info[0].memory_region);
 	unsigned len = gfx_total_size(info);
@@ -133,13 +131,19 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	unsigned rlen = memory_region_length(info[0].memory_region); // TODO: multiregion
 	printf("rlen %u\n", rlen);
 
+	int bmpX = 0;
+	int bmpY = 0;
+
 	while(info->memory_region != -1) {
 		puts("enc");
 		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY);
+		bmpX += info->gfxlayout->width;
 		info++;
 	}
 
 	free(bmp);
+	for (int i = 2048 ; i < len ; i++)
+		buf[i] = 0; 
 	return buf;
 }
 
