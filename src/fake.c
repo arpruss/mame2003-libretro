@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "driver.h"
 
 struct fake_piece {
     const char* name;
@@ -27,6 +28,19 @@ struct fake_whole bwidow = {
     { "136017.105" },
     { "136017.106" },
     { NULL }
+    }
+};
+
+struct fake_whole centiped3 = {
+    "centiped.zip",
+    { 
+     {"centiped.307", 2048, "Centipede.bin", 0 },
+     {"centiped.308" },
+     {"centiped.309" },
+     {"centiped.310" },
+     {"centiped.211", 2048, "zero", 0 },
+     {"centiped.212", 2048, "zero", 0 },
+     {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
 
@@ -130,6 +144,16 @@ struct fake_whole tempest3 = {
     }
 };
 
+/*
+struct fake_whole centiped = {
+    "centiped.zip",
+    {
+        {"136001.407", 2048, "Centipede.bin" },
+            {"136001.408"},{"136001.409"},{"136001.410"},{"136001.211"},{"136001.212"},{"136001.213"}
+    }
+};
+*/
+
 struct fake_whole* substitutions[] = {
     &bwidow,
     &asteroid,
@@ -141,6 +165,7 @@ struct fake_whole* substitutions[] = {
     &redbaron,
     &spacduel,
     &tempest3,
+    &centiped3,
     NULL
 };
 
