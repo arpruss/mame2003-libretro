@@ -27,8 +27,8 @@ static struct GfxLayout centipede_spritelayout =
 
 static struct GfxDecodeInfo centiped_gfxdecodeinfo[] =
 {
-	{ REGION_GFX1, 0, &centipede_charlayout,     0, 1 },
 	{ REGION_GFX1, 0, &centipede_spritelayout,   4, 4*4*4 },
+	{ REGION_GFX1, 0, &centipede_charlayout,     0, 1 },
 	{ -1 }
 };
 
@@ -56,6 +56,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	unsigned width = layout->width;
 	unsigned height = layout->height;
 	unsigned region_length = regionSize * 8;
+	printf("rl %d ci %d fn %d fd %d\n", region_length, layout->charincrement , FRAC_NUM(layout->total), FRAC_DEN(layout->total));
 	unsigned total = IS_FRAC(layout->total) ? region_length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
 	printf("st %d w %d h %d t %d off %d\n",start,width,height,total,bmpX);
 	for(unsigned i=0;i<MAX_GFX_PLANES;i++)
@@ -131,19 +132,19 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	unsigned rlen = memory_region_length(info[0].memory_region); // TODO: multiregion
 	printf("rlen %u\n", rlen);
 
-	int bmpX = 0;
+	int bmpX = 8;
 	int bmpY = 0;
 
 	while(info->memory_region != -1) {
 		puts("enc");
 		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY);
-		bmpX += info->gfxlayout->width;
+		bmpX -= 8;
 		info++;
+		break;
 	}
 
 	free(bmp);
-	for (int i = 2048 ; i < len ; i++)
-		buf[i] = 0; 
+	//for (int i = 0 ; i < 1024 ; i++) buf[i] = 255; 
 	return buf;
 }
 
