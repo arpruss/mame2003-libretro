@@ -47,38 +47,54 @@ static unsigned get_from_bmp(unsigned char* bmp, unsigned x, unsigned y) {
 	return bmp[off_bits+width*(height-1-y)+x];
 }
 
-static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start) {
+static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start, unsigned bmpX, unsigned bmpY) {
+	unsigned width = layout->width;
+	unsigned height = layout->height;
+	unsigned length = regionSize * 8;
+	unsigned total = IS_FRAC(layout->total) ? length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
+	printf("total %u\n", total);
 }
 
 
 static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize) {
+
+	printf("%u\n",info[0].memory_region);
 	unsigned len = gfx_total_size(info);
 	if (len<minSize)
 		len = minSize;
+	printf("len %u\n",len);
 	unsigned char* buf = malloc(len);
 
 	if (buf == NULL)
-		return buf;
+		return NULL;
 
 	for(int i=0;i<len;i++)
 		buf[i]=0;
 
 	fseek(bmpFile, 0, SEEK_END);
 	unsigned bmpSize = ftell(bmpFile);
-	fseek(bmpFile, 0, SEEK_SET);
 	unsigned char* bmp = malloc(bmpSize);
 	if (bmp == NULL) 
 		return buf;
-	fread(bmp, bmpSize, 1, bmpFile);
-	puts("read bmp");
+	printf("read bmp %u\n",bmpSize);
+	rewind(bmpFile);
+	if (bmpSize != fread(bmp, 1, bmpSize, bmpFile)) {
+		free(bmp);
+		return buf;
+	}
+	printf("did read bmp %u\n",bmpSize);
 
+	printf("%u\n",info[0].memory_region);
 	unsigned rlen = memory_region_length(info[0].memory_region); // TODO: multiregion
+	printf("rlen %u\n", rlen);
 
 	while(info->memory_region != -1) {
-		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start);
+		puts("enc");
+		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, 0, 0);
 		info++;
 	}
 
+	free(bmp);
 	return buf;
 }
 
@@ -154,8 +170,8 @@ struct fake_whole centiped3 = {
      {"centiped.308" },
      {"centiped.309" },
      {"centiped.310" },
-     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, &centiped_gfxdecodeinfo },
-     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, &centiped_gfxdecodeinfo },
+     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo },
+     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
