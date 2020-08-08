@@ -50,13 +50,46 @@ static unsigned get_from_bmp(unsigned char* bmp, unsigned x, unsigned y) {
 static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start, unsigned bmpX, unsigned bmpY) {
 	unsigned width = layout->width;
 	unsigned height = layout->height;
-	unsigned length = regionSize * 8;
-	unsigned total = IS_FRAC(layout->total) ? length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
-	printf("total %u\n", total);
+	unsigned region_length = regionSize * 8;
+	unsigned total = IS_FRAC(layout->total) ? region_length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
+	for(unsigned i=0;i<MAX_GFX_PLANES;i++)
+	{
+		int value = layout->planeoffset[i];
+		if (IS_FRAC(value))
+			layout->planeoffset[i] = FRAC_OFFSET(value) + region_length * FRAC_NUM(value) / FRAC_DEN(value);
+	}
+	for(unsigned j=0;j<MAX_GFX_SIZE;j++) 
+	{
+		int value = layout->xoffset[j];
+		if (IS_FRAC(value)) 
+			layout->xoffset[j] = FRAC_OFFSET(value) + region_length * FRAC_NUM(value) / FRAC_DEN(value);
+		value = layout->yoffset[j];
+		if (IS_FRAC(value)) 
+			layout->yoffset[j] = FRAC_OFFSET(value) + region_length * FRAC_NUM(value) / FRAC_DEN(value);
+	}
+
+	unsigned char* base = out + start;
+	for (unsigned c=0;c<total;c++) {
+		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
+			unsigned v = get_from_bmp(bmp, bmpX+x, bmpY+height*c+y);
+			for (int plane=0;plane<layout->planes;plane++) {
+				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
+				if(pos/8>=regionSize) {
+					printf("overflow\n");
+					continue;
+				}
+				if (v) //&(1<<plane)) 
+					base[pos/8] |= (1<<(pos%8));
+				else
+					base[pos/8] &= ~(1<<(pos%8));
+				
+			}
+		}
+	}
 }
 
 
-static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize) {
+static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize, unsigned bmpX, unsigned bmpY) {
 
 	printf("%u\n",info[0].memory_region);
 	unsigned len = gfx_total_size(info);
@@ -90,7 +123,7 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 
 	while(info->memory_region != -1) {
 		puts("enc");
-		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, 0, 0);
+		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY);
 		info++;
 	}
 
@@ -139,6 +172,8 @@ struct fake_piece {
     unsigned originalOffset;
     unsigned originalSize; // if smaller than size, will read more than once
     struct GfxDecodeInfo* gfx;
+    unsigned bmpX;
+    unsigned bmpY;
 };
 
 struct fake_whole {
@@ -170,8 +205,8 @@ struct fake_whole centiped3 = {
      {"centiped.308" },
      {"centiped.309" },
      {"centiped.310" },
-     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo },
-     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo },
+     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo, 0, 0 },
+     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 8, 0 },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
