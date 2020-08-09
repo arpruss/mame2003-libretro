@@ -76,16 +76,18 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	}
 
 	unsigned char* base = out + start;
-	for (unsigned c=width==height?60:0;c<(width==height?128:total);c++) {
+	for (unsigned c=width==height?64:0;c<(width==height?128:128);c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
 			unsigned v;
-			if (width==height)
+			if (width==height) {
 		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
-			else
-		        	v = get_from_bmp(bmp, bmpX+y, bmpY+height*c+x);
-			//if (height!=width) v = 15;
-		        //v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
-			//printf("%u,%u:%x\n",x,y,v);//
+			}
+			else {
+				unsigned charNum = 2*c;
+				if (charNum > 128)
+					charNum -= 127;
+		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
+			}
 			for (int plane=0;plane<layout->planes;plane++) {
 				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
 				if(pos/8+start>=regionSize) {
