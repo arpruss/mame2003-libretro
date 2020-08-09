@@ -76,10 +76,13 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	}
 
 	unsigned char* base = out + start;
-	for (unsigned c=0;c<total;c++) {
+	for (unsigned c=width==height?60:0;c<(width==height?128:total);c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
 			unsigned v;
-		        v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
+			if (width==height)
+		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
+			else
+		        	v = get_from_bmp(bmp, bmpX+y, bmpY+height*c+height-1-x);
 			//if (height!=width) v = 15;
 		        //v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			//printf("%u,%u:%x\n",x,y,v);//
@@ -140,7 +143,6 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY);
 		bmpX -= 8;
 		info++;
-		break;
 	}
 
 	free(bmp);
