@@ -32,8 +32,20 @@ static struct GfxDecodeInfo centiped_gfxdecodeinfo[] =
 	{ -1 }
 };
 
+static struct GfxDecodeInfo milliped_gfxdecodeinfo[] =
+{
+	{ REGION_GFX1, 0, &centipede_spritelayout, 4*4, 4*4*4*4 },
+	{ REGION_GFX1, 0, &centipede_charlayout,     0, 4 },
+	{ -1 }
+};
+
+
 static unsigned gfx_total_size(struct GfxDecodeInfo* info) {
 	return memory_region_length(info[0].memory_region); // TODO: doesn't work for multiregion
+}
+
+static unsigned get16LE(unsigned char* data) {
+	return data[0] | ((unsigned)data[1]<<8);
 }
 
 static unsigned get32LE(unsigned char* data) {
@@ -44,12 +56,20 @@ static unsigned get_from_bmp(unsigned char* bmp, unsigned x, unsigned y) {
 	unsigned off_bits = get32LE(bmp+10);
 	unsigned width = get32LE(bmp+14+4);
 	unsigned height = get32LE(bmp+14+8);
+	unsigned bits = get16LE(bmp+0x1c);
 	//return bmp[off_bits+width*(height-1-y)+x];
+	//
 	unsigned offset = width*(height-1-y)+x;
-	if(offset%2) 
-		return bmp[off_bits+offset/2] & 0xF;
-	else
-		return bmp[off_bits+offset/2] >> 4;
+
+	if (bits == 4) {
+		if(offset%2) 
+			return bmp[off_bits+offset/2] & 0xF;
+		else
+			return bmp[off_bits+offset/2] >> 4;
+	}
+	else {
+		return bmp[off_bits+offset];
+	}
 }
 
 static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start, unsigned bmpX, unsigned bmpY) {
@@ -76,7 +96,9 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	}
 
 	unsigned char* base = out + start;
+	//if (width != height) return;
 	for (unsigned c=width==height?64:0;c<(width==height?128:128);c++) {
+	//for (unsigned c=width==height?0:0;c<(width==height?128:128);c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
 			unsigned v;
 			if (width==height) {
@@ -141,7 +163,6 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	int bmpY = 0;
 
 	while(info->memory_region != -1) {
-		puts("enc");
 		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY);
 		bmpX -= 8;
 		info++;
@@ -152,13 +173,6 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	return buf;
 }
 
-
-static struct GfxDecodeInfo milliped_gfxdecodeinfo[] =
-{
-	{ REGION_GFX1, 0, &centipede_charlayout,     0, 4 },
-	{ REGION_GFX1, 0, &centipede_spritelayout, 4*4, 4*4*4*4 },
-	{ -1 }
-};
 
 
 
@@ -228,6 +242,19 @@ struct fake_whole centiped3 = {
      {"centiped.310" },
      {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo, 0, 0 },
      {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 8, 0 },
+     {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
+    }
+};
+
+struct fake_whole milliped = {
+    "milliped.zip",
+    { 
+     {"milliped.104", 4096, "Millipede.bin", 0 },
+     {"milliped.103" },
+     {"milliped.102" },
+     {"milliped.101" },
+     {"milliped.107", 2048, "Millipede.bmp", 0, 2048, milliped_gfxdecodeinfo, 0, 0 },
+     {"milliped.106", 2048, "Millipede.bmp", 2048, 2048, milliped_gfxdecodeinfo, 8, 0 },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
@@ -354,6 +381,7 @@ struct fake_whole* substitutions[] = {
     &spacduel,
     &tempest3,
     &centiped3,
+    &milliped,
     NULL
 };
 

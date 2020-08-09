@@ -854,8 +854,10 @@ int /* error */ load_zipped_file (int pathtype, int pathindex, const char* zipfi
 	printf("attempt %s %s\n",zipfile,filename);
 	zip = cache_openzip(pathtype, pathindex, zipfile);
 	if (!zip) {
-		if (fake_read(pathtype, pathindex, zipfile, filename, buf, length) < 0)
+		if (fake_read(pathtype, pathindex, zipfile, filename, buf, length) < 0) {
+			printf("fail\n");
 			return -1;
+		}
 		else
 			return 0;
 	}
