@@ -82,7 +82,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 			if (width==height)
 		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
 			else
-		        	v = get_from_bmp(bmp, bmpX+y, bmpY+height*c+height-1-x);
+		        	v = get_from_bmp(bmp, bmpX+y, bmpY+height*c+x);
 			//if (height!=width) v = 15;
 		        //v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			//printf("%u,%u:%x\n",x,y,v);//
