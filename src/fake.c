@@ -108,8 +108,8 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 		end = 128;
 	}
 	else if (mode == GFX_MILLIPED) {
-		c = width == height ? 0 : 0;
-		end = width == height ? 128 : 0;
+		c = width == height ? 64 : 0;
+		end = width == height ? 128 : 256;
 	}
 	else {
 		c = 0;
