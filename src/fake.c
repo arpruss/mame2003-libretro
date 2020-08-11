@@ -108,8 +108,8 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 		end = 128;
 	}
 	else if (mode == GFX_MILLIPED) {
-		c = width == height ? 64 : 0;
-		end = width == height ? 128 : 256;
+		c = width == height ? 0 : 0;
+		end = width == height ? 256 : 256;
 	}
 	else {
 		c = 0;
@@ -133,23 +133,33 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 			}
 			else if (mode == GFX_MILLIPED) {
 				if (width==height) {
-					unsigned charNum = (c+64)%256;
+					unsigned charNum = c;
+					//charNum %= 256;
+					unsigned k = charNum / 64;
+					if (k!=1 && k !=3)
+						continue;
+					if (k==1) {
+						charNum = c + 64;
+						//charNum %= 256;
+					}
+					else {
+						charNum = c;
+						//charNum %= 256;
+					}
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
 				else {
 					unsigned charNum = 2*c;
-					if (charNum > 128)
-						charNum -= 127;
+					if (charNum > 256)
+						charNum -= 255;
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
-			}
-			else if (mode == GFX_MILLIPED) {
 			}
 			else {
 		        	v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			}
 			for (int plane=0;plane<layout->planes;plane++) {
-				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
+				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*(c%total);
 				if(pos/8+start>=regionSize) {
 					continue;
 				}
