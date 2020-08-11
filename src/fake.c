@@ -2,6 +2,7 @@
 #include "driver.h"
 
 #define GFX_CENTIPED 1
+#define GFX_MILLIPED 3
 #define GFX_CCASTLES 2
 
 static struct GfxLayout centipede_charlayout =
@@ -106,6 +107,10 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 		c = width == height ? 64 : 0;
 		end = 128;
 	}
+	else if (mode == GFX_MILLIPED) {
+		c = width == height ? 0 : 0;
+		end = width == height ? 128 : 0;
+	}
 	else {
 		c = 0;
 		end = total;
@@ -116,7 +121,8 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 			unsigned v;
 			if (mode == GFX_CENTIPED) {
 				if (width==height) {
-		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
+					unsigned charNum = c;
+		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+width-1-x);
 				}
 				else {
 					unsigned charNum = 2*c;
@@ -124,9 +130,24 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 						charNum -= 127;
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
+			}
+			else if (mode == GFX_MILLIPED) {
+				if (width==height) {
+					unsigned charNum = (c+64)%256;
+		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
+				else {
+					//unsigned charNum = 2*c;
+					//if (charNum > 128)
+						//charNum -= 127;
+					unsigned charNum = c;
+		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
+				}
+			}
+			else if (mode == GFX_MILLIPED) {
+			}
 			else {
-		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
+		        	v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			}
 			for (int plane=0;plane<layout->planes;plane++) {
 				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
@@ -178,8 +199,16 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	printf("rlen %u\n", rlen);
 
 	int bmpY = 0;
-	int bmpX = mode == GFX_CENTIPED ? 8 : 0;
-	int deltaX = mode == GFX_CENTIPED ? -8 : 8;
+	int bmpX;
+	int deltaX;
+	if (mode == GFX_CENTIPED || mode == GFX_MILLIPED) {
+		bmpX = 8;
+		deltaX = -8;
+	}
+	else {
+		bmpX = 0;
+		deltaX = 0;
+	}
 
 	while(info->memory_region != -1) {
 		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY, mode);
@@ -188,7 +217,6 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	}
 
 	free(bmp);
-	//for (int i = 0 ; i < 1024 ; i++) buf[i] = 255; 
 	return buf;
 }
 
@@ -290,8 +318,8 @@ struct fake_whole milliped = {
      {"milliped.103" },
      {"milliped.102" },
      {"milliped.101" },
-     {"milliped.107", 2048, "Millipede.bmp", 0, 2048, milliped_gfxdecodeinfo, GFX_CENTIPED },
-     {"milliped.106", 2048, "Millipede.bmp", 2048, 2048, milliped_gfxdecodeinfo, GFX_CENTIPED },
+     {"milliped.107", 2048, "Millipede.bmp", 0, 2048, milliped_gfxdecodeinfo, GFX_MILLIPED },
+     {"milliped.106", 2048, "Millipede.bmp", 2048, 2048, milliped_gfxdecodeinfo, GFX_MILLIPED },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };

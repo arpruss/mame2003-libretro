@@ -781,6 +781,7 @@ static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex
 				
 				memcpy(*buf, gfx_buf+piece->originalOffset, piece->originalSize);
 				free(gfx_buf);
+				printf("success\n");
 				return 0;
 			}
 			free(*buf);
