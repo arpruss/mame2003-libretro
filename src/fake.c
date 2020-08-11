@@ -158,7 +158,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	}
 	else if (mode == GFX_MILLIPED) {
 		c = width == height ? 0 : 0;
-		end = width == height ? 256 : 256;
+		end = width == height ? 256 : 128;
 	}
 	else {
 		c = 0;
@@ -199,8 +199,8 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 				}
 				else {
 					unsigned charNum = 2*c;
-					if (charNum > 256)
-						charNum -= 255;
+					if (charNum > 128)
+						charNum -= 127;
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
 			}
