@@ -137,10 +137,9 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
 				else {
-					//unsigned charNum = 2*c;
-					//if (charNum > 128)
-						//charNum -= 127;
-					unsigned charNum = c;
+					unsigned charNum = 2*c;
+					if (charNum > 128)
+						charNum -= 127;
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
 			}
