@@ -2,8 +2,57 @@
 #include "driver.h"
 
 #define GFX_CENTIPED 1
-#define GFX_MILLIPED 3
 #define GFX_CCASTLES 2
+#define GFX_MILLIPED 3
+#define GFX_SPRINT_SPRITES   4
+#define GFX_SPRINT_TILES     5
+
+static struct GfxLayout sprint_tile_layout =
+{
+	8, 8,
+	64,
+	1,
+	{ 0 },
+	{
+		0,1,2,3,4,5,6,7
+	},
+	{
+		0x00, 0x08, 0x10, 0x18, 0x20, 0x28, 0x30, 0x38
+	},
+	0x40
+};
+
+
+static struct GfxLayout sprint_car_layout =
+{
+	16, 8,
+	32,
+	1,
+	{ 0 },
+	{
+		0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0x0,
+		0xf, 0xe, 0xd, 0xc, 0xb, 0xa, 0x9, 0x8
+	},
+	{
+		0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70
+	},
+	0x80
+};
+
+
+static struct GfxDecodeInfo sprint_tile_gfxdecodeinfo[] =
+{
+	{ REGION_GFX1, 0, &sprint_tile_layout, 0, 2 },
+	{ -1 }
+};
+
+
+static struct GfxDecodeInfo sprint_car_gfxdecodeinfo[] =
+{
+	{ REGION_GFX2, 0, &sprint_car_layout, 4, 4 },
+	{ -1 }
+};
+
 
 static struct GfxLayout centipede_charlayout =
 {
@@ -155,6 +204,9 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
 				}
 			}
+			//else if (mode == GFX_SPRINT_TILES) {
+		        	//v = get_from_bmp(bmp, bmpX+y, bmpY+height*c+x);
+			//}
 			else {
 		        	v = get_from_bmp(bmp, bmpX+x, bmpY+width*c+y);
 			}
@@ -226,6 +278,15 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	}
 
 	free(bmp);
+
+	if (mode == GFX_SPRINT_TILES || mode == GFX_SPRINT_TILES) {
+		if (minSize>=1024) for (unsigned i = 0 ; i < 512 ; i++) {
+			buf[512+i] = buf[i] & 0xF;
+		}
+		for (unsigned i = 0 ; i < 256 ; i++)
+			buf[i] >>= 4;
+	}
+
 	return buf;
 }
 
@@ -305,6 +366,23 @@ struct fake_whole bwidow = {
     { "136017.106" },
     { NULL }
     }
+};
+
+struct fake_whole sprint2 = {
+	"sprint2.zip",
+	{
+		{"6290-01.b1", 2048, "Sprint2.bin"},
+		{"6290-01.c1"},
+		{"6404.d1"},
+		{"6405.e1"},
+		{"6400-01.m2", 256, "zero"},
+		{"6401-01.e2", 32, "zero"},
+		{"6396-01.p4", 512, "Sprint2Tiles.bmp", 0, 512, sprint_tile_gfxdecodeinfo, GFX_SPRINT_TILES},
+		{"6397-01.r4", 512, "Sprint2Tiles.bmp", 512, 512, sprint_tile_gfxdecodeinfo, GFX_SPRINT_TILES},
+		{"6399-01.j6", 512, "Sprint2Sprites.bmp", 0, 512, sprint_car_gfxdecodeinfo, GFX_SPRINT_SPRITES},
+		{"6398-01.k6", 512, "Sprint2Sprites.bmp", 512, 512, sprint_car_gfxdecodeinfo, GFX_SPRINT_SPRITES},
+		{NULL},
+	}
 };
 
 struct fake_whole centiped3 = {
@@ -471,6 +549,7 @@ struct fake_whole* substitutions[] = {
     &centiped3,
     &milliped,
     &ccastles,
+    &sprint2,
     NULL
 };
 
@@ -506,5 +585,4 @@ static void fix(struct fake_whole* f) {
         piece++;
     }
 }
-
 
