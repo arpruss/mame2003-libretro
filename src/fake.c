@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include "driver.h"
 
+#define GFX_CENTIPED 1
+#define GFX_CCASTLES 2
 
 static struct GfxLayout centipede_charlayout =
 {
@@ -72,13 +74,13 @@ static unsigned get_from_bmp(unsigned char* bmp, unsigned x, unsigned y) {
 	}
 }
 
-static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start, unsigned bmpX, unsigned bmpY) {
+static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regionSize, struct GfxLayout* layout, unsigned start, unsigned bmpX, unsigned bmpY, unsigned mode) {
 	unsigned width = layout->width;
 	unsigned height = layout->height;
 	unsigned region_length = regionSize * 8;
-	printf("rl %d ci %d fn %d fd %d\n", region_length, layout->charincrement , FRAC_NUM(layout->total), FRAC_DEN(layout->total));
+	printf("m %d rl %d ci %d fn %d fd %d\n", mode, region_length, layout->charincrement , FRAC_NUM(layout->total), FRAC_DEN(layout->total));
 	unsigned total = IS_FRAC(layout->total) ? region_length / layout->charincrement * FRAC_NUM(layout->total) / FRAC_DEN(layout->total) : layout->total;
-	printf("st %d w %d h %d t %d off %d\n",start,width,height,total,bmpX);
+	printf("st %d w %d h %d t %d ",start,width,height,total);
 	for(unsigned i=0;i<MAX_GFX_PLANES;i++)
 	{
 		int value = layout->planeoffset[i];
@@ -96,19 +98,35 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 	}
 
 	unsigned char* base = out + start;
-	//if (width != height) return;
-	for (unsigned c=width==height?64:0;c<(width==height?128:128);c++) {
-	//for (unsigned c=width==height?0:0;c<(width==height?128:128);c++) {
+
+	unsigned c;
+	unsigned end;
+
+	if (mode == GFX_CENTIPED) {
+		c = width == height ? 64 : 0;
+		end = 128;
+	}
+	else {
+		c = 0;
+		end = total;
+	}
+
+	for (;c<end;c++) {
 		for(int x=0;x<width;x++) for(int y=0;y<height;y++) {
 			unsigned v;
-			if (width==height) {
-		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
-			}
+			if (mode == GFX_CENTIPED) {
+				if (width==height) {
+		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
+				}
+				else {
+					unsigned charNum = 2*c;
+					if (charNum > 128)
+						charNum -= 127;
+		        		v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
+				}
+				}
 			else {
-				unsigned charNum = 2*c;
-				if (charNum > 128)
-					charNum -= 127;
-		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*charNum+x);
+		        	v = get_from_bmp(bmp, bmpX+y, bmpY+width*c+width-1-x);
 			}
 			for (int plane=0;plane<layout->planes;plane++) {
 				unsigned pos = layout->planeoffset[plane]+layout->xoffset[x]+layout->yoffset[y]+layout->charincrement*c;
@@ -126,7 +144,7 @@ static void encode_layout(unsigned char* out, unsigned char* bmp, unsigned regio
 }
 
 
-static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize) {
+static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minSize, unsigned mode) {
 
 	printf("%u\n",info[0].memory_region);
 	unsigned len = gfx_total_size(info);
@@ -159,12 +177,13 @@ static void* encode_gfx(struct GfxDecodeInfo* info, FILE* bmpFile, unsigned minS
 	unsigned rlen = memory_region_length(info[0].memory_region); // TODO: multiregion
 	printf("rlen %u\n", rlen);
 
-	int bmpX = 8;
 	int bmpY = 0;
+	int bmpX = mode == GFX_CENTIPED ? 8 : 0;
+	int deltaX = mode == GFX_CENTIPED ? -8 : 8;
 
 	while(info->memory_region != -1) {
-		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY);
-		bmpX -= 8;
+		encode_layout(buf, bmp, rlen, info->gfxlayout, info->start, bmpX, bmpY, mode);
+		bmpX += deltaX;
 		info++;
 	}
 
@@ -200,15 +219,33 @@ static struct GfxDecodeInfo warlords_gfxdecodeinfo[] =
 	{ -1 }
 };
 
+static struct GfxLayout ccastles_spritelayout =
+{
+       8,16,
+	        256,
+		        4,
+		        { 0x2000*8+0, 0x2000*8+4, 0, 4 },
+		        { 0, 1, 2, 3, 8+0, 8+1, 8+2, 8+3 },
+		        { 0*16, 1*16, 2*16, 3*16, 4*16, 5*16, 6*16, 7*16,
+                        8*16, 9*16, 10*16, 11*16, 12*16, 13*16, 14*16, 15*16 },
+        32*8
+};
+
+
+static struct GfxDecodeInfo ccastles_gfxdecodeinfo[] =
+{
+	        { REGION_GFX1, 0x0000, &ccastles_spritelayout,  0, 1 },
+		        { -1 }
+};
+
 struct fake_piece {
     const char* name;
     unsigned size;
     const char* originalFile;
     unsigned originalOffset;
-    unsigned originalSize; // if smaller than size, will read more than once
+    unsigned originalSize;
     struct GfxDecodeInfo* gfx;
-    unsigned bmpX;
-    unsigned bmpY;
+    unsigned mode;
 };
 
 struct fake_whole {
@@ -240,8 +277,8 @@ struct fake_whole centiped3 = {
      {"centiped.308" },
      {"centiped.309" },
      {"centiped.310" },
-     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo, 0, 0 },
-     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, 8, 0 },
+     {"centiped.211", 2048, "Centipede.bmp", 0, 2048, centiped_gfxdecodeinfo, GFX_CENTIPED},
+     {"centiped.212", 2048, "Centipede.bmp", 2048, 2048, centiped_gfxdecodeinfo, GFX_CENTIPED},
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
@@ -253,8 +290,8 @@ struct fake_whole milliped = {
      {"milliped.103" },
      {"milliped.102" },
      {"milliped.101" },
-     {"milliped.107", 2048, "Millipede.bmp", 0, 2048, milliped_gfxdecodeinfo, 0, 0 },
-     {"milliped.106", 2048, "Millipede.bmp", 2048, 2048, milliped_gfxdecodeinfo, 8, 0 },
+     {"milliped.107", 2048, "Millipede.bmp", 0, 2048, milliped_gfxdecodeinfo, GFX_CENTIPED },
+     {"milliped.106", 2048, "Millipede.bmp", 2048, 2048, milliped_gfxdecodeinfo, GFX_CENTIPED },
      {NULL} //TODO:gfx:http://adb.arcadeitalia.net/dettaglio_mame.php?game_name=centiped3&search_id=
     }
 };
@@ -268,6 +305,20 @@ struct fake_whole asteroid = {
         { "035127.02" },
         { NULL }
     }
+};
+
+struct fake_whole ccastles = {
+	"ccastles.zip",
+	{
+		{"ccastles.102", 8192, "Crystal Castles.bin", 0 },
+		{"ccastles.101", 8192, "Crystal Castles.bin", 8192 },
+		{"ccastles.303", 8192, "Crystal Castles.bin", 16384 },
+		{"ccastles.304", 8192, "Crystal Castles.bin", 24576 },
+		{"ccastles.305", 8192, "Crystal Castles.bin", 32768 },
+     {"ccastles.106", 8192, "Crystal Castles.bmp", 0, 8192, ccastles_gfxdecodeinfo, GFX_CCASTLES },
+     {"ccastles.107", 8192, "Crystal Castles.bmp", 8192, 8192, ccastles_gfxdecodeinfo, GFX_CCASTLES },
+		{NULL}
+	}
 };
 
 struct fake_whole astdelux = {
@@ -382,6 +433,7 @@ struct fake_whole* substitutions[] = {
     &tempest3,
     &centiped3,
     &milliped,
+    &ccastles,
     NULL
 };
 

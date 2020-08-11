@@ -7,6 +7,9 @@
 #include <assert.h>
 #include <compat/zlib.h>
 
+#include "fake.c"
+
+
 /* public globals */
 int	gUnzipQuiet = 0;		/* flag controls error messages */
 
@@ -760,8 +763,6 @@ static int equal_filename(const char* zipfile, const char* file) {
 	return !*s1 && !*s2;
 }
 
-#include "fake.c"
-
 static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex, const char* filename, unsigned char** buf, unsigned int* length) {
 
 	*length = piece->size;
@@ -772,7 +773,7 @@ static int substitute_read(struct fake_piece* piece, int pathtype, int pathindex
 		printf("gfx");
 		FILE* bmp = osd_fopen(pathtype, pathindex, piece->originalFile, "rb");
 		if (bmp != NULL) {
-			unsigned char* gfx_buf = encode_gfx(piece->gfx,bmp,piece->originalOffset+piece->originalSize);
+			unsigned char* gfx_buf = encode_gfx(piece->gfx,bmp,piece->originalOffset+piece->originalSize, piece->mode);
 			fclose(bmp);
 			if (gfx_buf != NULL) {
 				printf("copying gfx from %u\n", piece->originalOffset);
